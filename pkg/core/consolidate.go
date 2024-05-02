@@ -19,33 +19,46 @@ type Revision struct {
 	Contents string       `json:"contents"`
 }
 
-func Consolidate() error {
+func parseTinkerFromBytes(b []byte) (Revision, error) {
+	var revision Revision
+	err := json.Unmarshal(b, &revision)
+	if err != nil {
+		return Revision{}, err
+	}
 
+	return revision, nil
+}
+
+func ReadTinkers() ([]Revision, error) {
 	f, err := os.Open(".tinker")
 	if err != nil {
 		slog.Error(err.Error())
-		return err
+		return nil, err
 	}
 	defer f.Close()
 
 	files, err := f.Readdirnames(0)
 	if err != nil {
 		slog.Error(err.Error())
-		return err
+		return nil, err
 	}
 
+	tinkers := make([]Revision, 0)
 	for _, file := range files {
-		slog.Info(file)
 		b, err := os.ReadFile(".tinker/" + file)
 		if err != nil {
 			slog.Error(err.Error())
-			return err
+			return nil, err
 		}
 
-		var revision Revision
-		json.Unmarshal(b, &revision)
-		slog.Info("Tinker", slog.String("type", string(revision.Type)), slog.String("contents", revision.Contents))
+		revision, err := parseTinkerFromBytes(b)
+		if err != nil {
+			slog.Error(err.Error())
+			return nil, err
+		}
+
+		tinkers = append(tinkers, revision)
 	}
 
-	return nil
+	return tinkers, nil
 }
